@@ -230,7 +230,84 @@ function Event.LookUp(obj)
     return registeredevents
 end
 
----@TODO: make a GUID generator based on the level + rank + passive of the otomo
+--- Representation of a Guid each number is 32bit long which give a us 128 bit
+---@class Guid
+---@field A number
+---@field B number
+---@field C number
+---@field D number
+local Guid = {
+    A = 0,
+    B = 0,
+    C = 0,
+    D = 0,
+}
+
+---Constructor of the class
+---@param A number
+---@param B number
+---@param C number
+---@param D number
+function Guid:new(A, B, C, D)
+    local guid = {}
+    guid = setmetatable(guid, self)
+    self.__index = self
+
+    self._A = A
+    self._B = B
+    self._C = C
+    self._D = D
+
+    return guid
+end
+
+--- A field Getter
+---@return number A
+function Guid:getA()
+    return self._A
+end
+
+--- B field Getter
+---@return number B
+function Guid:getB()
+    return self._B
+end
+
+--- C field Getter
+---@return number C
+function Guid:getC()
+    return self._C
+end
+
+--- D field Getter
+---@return number D
+function Guid:getD()
+    return self._D
+end
+
+--- return a string representing the @Guid
+---@private
+function Guid:__tostring()
+    local guidStr = ""
+    guidStr = string.format("A: %d,\t B: %d,\t C: %d,\t D: %d", self:getA(), self:getB(), self:getC(), self:getD())
+    return guidStr
+end
+
+--- Return a string representing the data inside the @Guid
+function Guid:ToString()
+    return self:__tostring()
+end
+
+--- Return true if self is eaual to the @otherGuid and false otherwise
+---@param otherGuid Guid the other @Guid to test
+---@return boolean isEqual
+function Guid:isEqual(otherGuid)
+    if self:getA() == otherGuid:getA() and self:getB() == otherGuid:getB() and self:getC() == otherGuid:getC() and self:getD() == otherGuid:getD()  then
+        return true
+    else
+        return false
+    end
+end
 
 ---@class Otomo
 ---@field characterID string|nil
@@ -579,11 +656,24 @@ function Player:retrievePartyMember()
                     tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, nil, nil)
                     -- print(tmpOtomo:ToString())
                     otomos[index] = tmpOtomo
+                    local PalInstanceId = otomoIndividualParameter.IndividualId
+                    local test = PalInstanceId.instanceId
+                    local a = test.A
+                    local b = test.B
+                    local c = test.C
+                    local d= test.D
+                    print(string.format("A: %d,\t B: %d,\t C: %d,\t D: %d", a, b, c, d))
                 end
             end)
 
             local foundTeam = PartyTeam:new(otomos)
-            print(foundTeam:ToString())
+
+
+
+
+
+
+
             -- print(tostring(self))
             --[[ TODO need to be tested if its already the team playing
                     and fighting before we can notify the update
@@ -593,6 +683,7 @@ function Player:retrievePartyMember()
             -- self:notifyObservers()
         end)
 end
+
 
 --##################################################--
 --################### Registers ####################--
