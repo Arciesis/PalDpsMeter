@@ -47,7 +47,11 @@ LAST_BATTLE_MODE = false
 --##################### Utils ######################--
 --##################################################--
 
-
+-- gender
+-- memory addr of GUID
+-- passive skill list
+-- PalUtility.GetPassiveSkillManager
+--
 
 --##################################################--
 --################### Listeners ####################--
@@ -230,14 +234,14 @@ end
 
 ---@class Otomo
 ---@field characterID string|nil
----@field slotInParty nil
----@field damageTaken number|nil
----@field damageInfilcted number|nil
+---@field slotInParty number|nil
+---@field damageTaken number
+---@field damageInfilcted number
 local Otomo = {
     characterID = nil,
     slotInParty = -1,
-    damageTaken = nil,
-    damageInflicted = nil
+    damageTaken = -1,
+    damageInflicted = -1
 }
 
 --- Constructor like for the class
@@ -253,10 +257,31 @@ function Otomo:new(o, characterID, slotInParty, damageTaken, damageInflicted)
 
     otomo._characterID = characterID or nil
     otomo._slotInParty = slotInParty or -1
-    otomo._damageTaken = damageTaken or nil
+    otomo._damageTaken = damageTaken or -1
     otomo._damageInflicted = damageInflicted or -1
 
     return otomo
+end
+
+function Otomo:__tostring()
+    local damageTaken = self:getDamageTaken()
+    local damageInflicted = self:getDamageInflicted()
+
+
+    if not damageTaken == -1 then
+        damageTaken = 0
+    end
+
+    if not damageInflicted == -1 then
+        damageInflicted = 0
+    end
+
+    return (string.format("Name: %s,\t slootIndex: %d,\t damageTaken: %d,\t damageInflicted: %d", self:getCharacterID(),
+        self:getSlotInParty(), damageTaken, damageInflicted))
+end
+
+function Otomo:ToString()
+    return self:__tostring()
 end
 
 function Otomo:getCharacterID()
@@ -299,31 +324,28 @@ function Otomo:__index(key)
 end
 
 ---@class PartyTeam that represent the team of otomo that the player cary
----@field o any
 ---@field team table a table that contains all of the otomo in the team of the player
+---@field currentlyOutOtomo number the out otomo or -1 if none
 ---@field nbOtomoCurrentlyInTeam number The number of otomo currently in the team
 local PartyTeam = {
-    _team = {},
-    _currentlyOutOtomo = nil,
-    _nbOtomoCurrentlyInTeam = 0,
+    team = {},
+    currentlyOutOtomo = -1,
+    nbOtomoCurrentlyInTeam = -1,
 
 }
 
----@param o any
 ---@param otomos table The otomos that are in the team, can be 1 to 5
-function PartyTeam:new(o, otomos)
-    local party = o or {}
-    party = setmetatable(party, self)
+function PartyTeam:new(otomos)
+    local party = setmetatable({}, self)
+    self.__index = self
     self.constants = setmetatable({}, { __index = function(_, key) return nil end })
     self.constants.MIN_PER_TEAM = 0
     self.constants.MAX_PER_TEAM = 5
 
+    self._team = otomos
+    self._currentlyOutOtomo = -1 ---@TODO: Need to be hooked
+    self._nbOtomoCurrentlyInTeam = #self._team ---@TODO: Need to be hooked too
 
-    party._team = otomos or nil
-    party._currentlyOutOtomo = nil ---@TODO: Need to be hooked
-    party._nbOtomoCurrentlyInTeam = 0 ---@TODO: Need to be hooked too
-
-    self:setTeam(otomos)
 
     return party
 end
@@ -345,14 +367,7 @@ end
 
 ---@param otomos table the @Otomo to set in the team
 function PartyTeam:setTeam(otomos)
-    if (not otomos) or #otomos > self.constants.MAX_PER_TEAM then
-        print("[PalDpsMeter]passed arguments are wrong, cannot set the team")
-        return
-    end
 
-    for i = 1, #otomos, 1 do
-        self:_addOtomo(otomos[i])
-    end
 end
 
 ---@param slotID number
@@ -366,8 +381,9 @@ function PartyTeam:setCurrentlyOutOtomo(slotID)
 end
 
 ---@param nb number
-function PartyTeam:setNbOtomoCurrentlyInTeam(nb)
-    if nb < 0 and nb > 5 then
+---@private
+function PartyTeam:_setNbOtomoCurrentlyInTeam(nb)
+    if nb < self.constants.MIN_PER_TEAM and nb > self.constants.MAX_PER_TEAM then
         print("[PalDpsMeter] try to set more otomo than you can have in your team")
         return
     end
@@ -375,24 +391,35 @@ function PartyTeam:setNbOtomoCurrentlyInTeam(nb)
 end
 
 --- Add an Otomo via its slotID replacing the previous one
----@param otomo Otomo
+---@param otomo Otomo the new otomo to place in the team
+---@private
 function PartyTeam:_addOtomo(otomo)
     local otomoSlotID = otomo:getSlotInParty()
-    table.insert(self:getTeam(), otomoSlotID, otomo)
-    self:setNbOtomoCurrentlyInTeam(self:getNbOtomoCurrentlyInTeam() + 1)
+    local team = self:getTeam()
+    team[otomoSlotID] = otomo
+
+    -- table.insert(self:getTeam(), otomoSlotID, otomo)
+
+    if self:getNbOtomoCurrentlyInTeam() == nil or self:getNbOtomoCurrentlyInTeam() == 0 then
+        self:_setNbOtomoCurrentlyInTeam(1)
+    end
+
+    self:_setNbOtomoCurrentlyInTeam(self:getNbOtomoCurrentlyInTeam() + 1)
 end
 
 ---@param slotID number
+---@private
 function PartyTeam:_removeOtomoBySlotID(slotID)
-    table.remove(self:getTeam(), slotID - 1)
+    -- self:getTeam()[slotID] =
+    table.remove(self:getTeam(), slotID)
     self._nbOtomoCurrentlyInTeam = self._nbOtomoCurrentlyInTeam - 1
 end
 
 ---@param otomo Otomo
-function PartyTeam:replaceOtomo(otomo)
+---@private
+function PartyTeam:_replaceOtomo(otomo)
     local otomoSlotID = otomo:getSlotInParty()
-    self._removeOtomoBySlotID(self, otomoSlotID)
-    self._addOtomo(self, otomo)
+    self:getTeam()[otomoSlotID] = otomo
 end
 
 ---@param otomo Otomo
@@ -401,24 +428,65 @@ function PartyTeam:removeOtomo(otomo)
     self:_removeOtomoBySlotID(otomoSlotID)
 end
 
----@param otomo Otomo
-function PartyTeam:addOtomo(otomo)
-    self:_addOtomo(otomo)
-end
+---@param slotIndex number the index of the otomo to retrieve
+---@return Otomo|nil otomo at the index or nil if none was found
+---@private
+function PartyTeam:_getOtomoBySlotID(slotIndex)
+    if slotIndex < self.constants.MIN_PER_TEAM or slotIndex > self.constants.MAX_PER_TEAM then
+        error("indexing a wrong slotID")
+        return
+    end
 
----@param slotID number
-function PartyTeam:_getOtomoBySlotID(slotID)
-    local otomo = table.unpack(self:getTeam(), slotID - 1, slotID - 1)
+    local currentTeam = self:getTeam()
+
+    if not currentTeam then
+        error("team is empty")
+    end
+
+    if not currentTeam[slotIndex] then
+        print(string.format("index of the current team: %d", slotIndex))
+        error("No otomo found at this index")
+        return
+    end
+    local otomo = currentTeam[slotIndex]
     return otomo
 end
 
 ---Update the otomo who is out
 ---@param newSlotID number the new @slotID
 ---@param oldSlotID number|nil the old @slotID or nil if its the first throw of the play time
+---@private
 function PartyTeam:_updateCurrentlyOutOtomo(newSlotID, oldSlotID)
     self:setCurrentlyOutOtomo(new)
     ---@TODO: Maybe do some stuff with the @oldslotID
 end
+
+---@return string|nil str the string to print
+---@private
+function PartyTeam:__tostring()
+    local str = ""
+    str = string.format("nbOtomoInTeam: %d, currentlyOutOtomo: %d\n", self:getNbOtomoCurrentlyInTeam(),
+        self:getCurrentlyOutOtomo())
+    for i = 1, self:getNbOtomoCurrentlyInTeam(), 1 do
+        local otomo = self:_getOtomoBySlotID(i)
+        if not otomo then
+            return
+        end
+        str = str .. string.format("TeamMember: [%s]\n", otomo:ToString())
+    end
+    return str
+end
+
+---@return string|nil str @PartyTeam object as string
+function PartyTeam:ToString()
+    return self:__tostring()
+end
+
+-- function PartyTeam:__index(key)
+--     if string.sub(key, 1, 1) == "_" then
+--         error("Attempting to access private member:")
+--     end
+-- end
 
 --- Intercept when an otomo is throwing out and do what is necessary
 ---@param slotID number the @slotID of the otomo who is thrown out
@@ -432,12 +500,6 @@ function PartyTeam:onActivateOtomo(slotID)
     self:_updateCurrentlyOutOtomo(newSlotID, oldSlotID)
 
     ---@TODO: Do some stuff later when the code will be more advanced
-end
-
-function PartyTeam:__index(key)
-    if string.sub(key, 1, 1) == "_" then
-        error("Attempting to access private member:", key)
-    end
 end
 
 local IPlayer = setmetatable({}, self)
@@ -455,10 +517,10 @@ function IPlayer:__index(key)
 end
 
 ---@class Player The Subject of the observer pattern
----@field team PartyTeam|nil}
+---@field team PartyTeam
 ---@field observers table
 local Player = {
-    _team = nil,
+    _team = {},
     _observers = {}
 }
 --- Constructor
@@ -468,7 +530,7 @@ function Player:new(o)
     local observers = {}
     setmetatable(Player, { __index = IPlayer })
 
-    local _team = PartyTeam:new(nil, {}) or nil
+    local _team = PartyTeam:new({})
     local _observers = {} or nil
     player._team = _team
     player._observers = _observers
@@ -507,21 +569,21 @@ function Player:retrievePartyMember()
             -- local isOtomoPresent = true
             local HolderComponent = component:get()
             -- local otomoCount = HolderComponent:GetOtomoCount()
+            local tmpOtomo = nil
             local slots = HolderComponent.CharacterContainer.SlotArray
             slots:ForEach(function(index, elem)
                 if not elem:get():isEmpty() then
                     local otomoHandle = elem:get():GetHandle()
                     local otomoIndividualParameter = otomoHandle:TryGetIndividualParameter()
                     local otomoID = otomoIndividualParameter:GetCharacterID()
-                    local tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, nil, nil)
-
-
+                    tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, nil, nil)
+                    -- print(tmpOtomo:ToString())
                     otomos[index] = tmpOtomo
                 end
             end)
 
-
-            local team = PartyTeam:new(nil, otomos)
+            local foundTeam = PartyTeam:new(otomos)
+            print(foundTeam:ToString())
             -- print(tostring(self))
             --[[ TODO need to be tested if its already the team playing
                     and fighting before we can notify the update
