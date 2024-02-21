@@ -1,4 +1,3 @@
----@diagnostic disable: undefined-global
 -- RegisterHook(FunctionName, Callback)
 -- FunctionName => function name from UE4SS
 -- Callback => our function callback
@@ -28,10 +27,12 @@ print("[PalDpsMeter] Pal DPS Meter has started!")
 local config = require "config"
 local eventName = require "eventName"
 --##################################################--
---#################### Globals #####################--
+--################### Constants ####################--
 --##################################################--
-
-
+local constants = {
+    MIN_PER_TEAM = 1,
+    MAX_PER_TEAM = 5,
+}
 
 --##################################################--
 --##################### Utils ######################--
@@ -47,7 +48,7 @@ local eventName = require "eventName"
 --################### Listeners ####################--
 --##################################################--
 
--- ---Intercept when the Otomo is swaped or throw in
+-- ---Intercept when the Otomo is swapped or throw in
 -- ---@param otomo string the nickname of the otomo in the datatables
 -- ---@param slotID number the number of the slot of the Otomo, start at 0
 -- local function onSwapOtomoOut(otomo, slotID)
@@ -91,38 +92,64 @@ local eventName = require "eventName"
 --     if (LAST_OTOMO_OUT ~= otomo and LAST_SLOT_ID ~= slotID) then
 --         LAST_OTOMO_OUT = otomo
 --         LAST_SLOT_ID = slotID
---         print("[PalDpsMeter] Otomo has been swaped")
+--         print("[PalDpsMeter] Otomo has been swapped")
 --     end
 --     ---@TODO: finish all the cases, I may need The swapIn function
 -- end
 
-local function onSwapOtomoIn()
-    ---@TODO: Do something with that
-    print("[PalDPsMeter] Deactivation of the otomo")
-end
+--local function onSwapOtomoIn()
+--    ---@TODO: Do something with that
+--    print("[PalDPsMeter] Deactivation of the otomo")
+--end
 
---- Intercept when the battle mode is swaping
+-- Intercept when the battle mode is swapping
 ---@param mode boolean true if the battle mode is ON and false otherwise
-local function onBattleSwap(mode)
-    if (not LAST_BATTLE_MODE) and mode then
-        -- if the mode swap to ON
-        print("[PalDpsMeter] Mode switching to ON starting the analytics")
-    elseif LAST_BATTLE_MODE and (not mode) then
-        -- if the mode swap to OFF
-        print("[PalDpsMeter] Mode switching to OFF ending the analytics")
-    elseif LAST_BATTLE_MODE and mode then
-        -- should not happend, both values are the same
-        print("[PalDpsMeter] Error in battle mode both are to ON")
-    else
-        -- idem
-        print("[PalDpsMeter] Error in battle mode both are to OFF")
-    end
-end
+--local function onBattleSwap(mode)
+--    if (not LAST_BATTLE_MODE) and mode then
+--        -- if the mode swap to ON
+--        print("[PalDpsMeter] Mode switching to ON starting the analytics")
+--    elseif LAST_BATTLE_MODE and (not mode) then
+--        -- if the mode swap to OFF
+--        print("[PalDpsMeter] Mode switching to OFF ending the analytics")
+--    elseif LAST_BATTLE_MODE and mode then
+--        -- should not happened, both values are the same
+--        print("[PalDpsMeter] Error in battle mode both are to ON")
+--    else
+--        -- idem
+--        print("[PalDpsMeter] Error in battle mode both are to OFF")
+--    end
+--end
 
 
 --##################################################--
 --################## Classes like ##################--
 --##################################################--
+
+--TODO : Some refacto to do for making the code style linear
+
+
+-- ---@class AObserver a abstract-ish class for observer object
+-- local AObserver = {}
+
+-- --- To instantiate the required function
+-- ---@return any newObject the newly created object
+-- function AObserver:new()
+--     local newObject = setmetatable({}, self)
+--     self.__index = self
+--     return newObject
+-- end
+
+-- ---@param listener function the callback function
+-- function AObserver:registerUpdateListener(listener)
+--     self.triggerUpdate = listener
+-- end
+
+-- function AObserver:processUpdate()
+--     self:triggerUpdate()
+-- end
+
+
+
 
 --- Representation of a Guid each number is 32bit long which give a us 128 bit
 ---@class Guid
@@ -130,18 +157,14 @@ end
 ---@field B integer
 ---@field C integer
 ---@field D integer
-local Guid = {
-    A = 0,
-    B = 0,
-    C = 0,
-    D = 0,
-}
+local Guid = {}
 
 ---Constructor of the class
 ---@param A integer
 ---@param B integer
 ---@param C integer
 ---@param D integer
+---@public
 function Guid:new(A, B, C, D)
     local guid = {}
     guid = setmetatable(guid, self)
@@ -189,15 +212,17 @@ end
 
 --- Return a string representing the data inside the @Guid
 ---@return string str
+---@public
 function Guid:ToString()
     return self:__tostring()
 end
 
---- Return true if self is eaual to the @otherGuid and false otherwise
+--- Return true if self is equal to the @otherGuid and false otherwise
 ---@param otherGuid Guid the other @Guid to test
 ---@return boolean isEqual
 function Guid:isEqual(otherGuid)
-    if self:getA() == otherGuid:getA() and self:getB() == otherGuid:getB() and self:getC() == otherGuid:getC() and self:getD() == otherGuid:getD() then
+    if self:getA() == otherGuid:getA() and self:getB() == otherGuid:getB() and self:getC() == otherGuid:getC()
+    and self:getD() == otherGuid:getD() then
         return true
     else
         return false
@@ -233,7 +258,7 @@ end
 ---@return string str
 ---@private
 function OtomoUniqueId:__tostring()
-    return string.format("OtomoUinique Identifier: %i", self:getAddr())
+    return string.format("OtomoUnique Identifier: %i", self:getAddr())
 end
 
 --- ToString method
@@ -252,7 +277,6 @@ function OtomoUniqueId:isEqual(otherUId)
 
     return (self:getAddr() == otherUId:getAddr())
 end
-
 
 ---@class Otomo
 ---@field characterID string|nil
@@ -300,7 +324,8 @@ function Otomo:__tostring()
 
     local uidStr = self:getUid():ToString()
 
-    return (string.format("Name: %s,\t slootIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t %s", self:getCharacterID(),
+    return (string.format("Name: %s,\t slotIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t
+        %s", self:getCharacterID(),
         self:getSlotInParty(), damageTaken, damageInflicted, uidStr))
 end
 
@@ -363,137 +388,132 @@ function Otomo:isSame(otherOtomo)
     return (self:getUid():isEqual(othereUId))
 end
 
----@class PartyTeam that represent the team of otomo that the player cary
----@field team table a table that contains all of the otomo in the team of the player
----@field currentlyOutOtomo number the out otomo or -1 if none
----@field nbOtomoCurrentlyInTeam number The number of otomo currently in the team
+---@class PartyTeam that represent the team of otomo of the player
+---@field private members table a table that contains all of the otomo in the team of the player
+---@field private currentlyOutOtomo number the out otomo slot index or -1 if none
+---@field private nbOtomoCurrentlyInTeam number The number of otomo currently in the team
 local PartyTeam = {}
 
----@param otomos table The otomos that are in the team, can be 1 to 5
+
+---@TODO: modify the text
+---@param otomos table The otomos in the team, can be 1 to 5 if its 0 then the team team is empty
 function PartyTeam:new(otomos)
     local party = setmetatable({}, self)
     self.__index = self
-    self.constants = setmetatable({}, { __index = function(_, key) return nil end })
-    self.constants.MIN_PER_TEAM = 0
-    self.constants.MAX_PER_TEAM = 5
 
-    self._team = otomos
-    self._currentlyOutOtomo = -1 ---@TODO: Need to be notify
-    self._nbOtomoCurrentlyInTeam = #self._team
+    self.members = otomos
+    ---@TODO: Need to be notify
+    self.currentlyOutOtomo = -1
+    self.nbOtomoCurrentlyInTeam = #self.members
 
 
     return party
 end
 
 ---@return table theTeam
-function PartyTeam:getTeam()
-    return self._team
+function PartyTeam:getMembers()
+    return self.members
 end
 
----@return number slotID of the currently out otomo
+---@return integer slotID of the currently out otomo
 function PartyTeam:getCurrentlyOutOtomo()
-    return self._currentlyOutOtomo
+    return self.currentlyOutOtomo
 end
 
 ---@return number @nbOtomoCurrentlyInTeam
 function PartyTeam:getNbOtomoCurrentlyInTeam()
-    return self._nbOtomoCurrentlyInTeam
+    return self.nbOtomoCurrentlyInTeam
 end
 
 ---@param otomos table the @Otomo to set in the team
-function PartyTeam:setTeam(otomos)
-
+function PartyTeam:setMembers(otomos)
+    self.members = otomos
 end
 
----@param slotID number
-function PartyTeam:setCurrentlyOutOtomo(slotID)
-    ---@FIXME set the 1/5 values to a var to be more carefull if the team span expand in the future
-    if slotID < 1 or slotID > 5 then
+---@param slotIndex integer
+function PartyTeam:setCurrentlyOutOtomo(slotIndex)
+    print(string.format("slotID: %i", slotIndex))
+    if slotIndex < constants.MIN_PER_TEAM or slotIndex > constants.MAX_PER_TEAM then
         print("[PalDpsMeter] Your are trying to set a slot out of band")
         return
     end
-    self._currentlyOutOtomo = slotID
+    self.currentlyOutOtomo = slotIndex
 end
 
----@param nb number
----@private
-function PartyTeam:_setNbOtomoCurrentlyInTeam(nb)
-    if nb < self.constants.MIN_PER_TEAM and nb > self.constants.MAX_PER_TEAM then
+---@param nb integer
+function PartyTeam:setNbOtomoCurrentlyInTeam(nb)
+    if nb < constants.MIN_PER_TEAM and nb > constants.MAX_PER_TEAM then
         print("[PalDpsMeter] try to set more otomo than you can have in your team")
         return
     end
-    self._nbOtomoCurrentlyInTeam = nb
+    self.nbOtomoCurrentlyInTeam = nb
 end
 
 --- Add an Otomo via its slotID replacing the previous one
 ---@param otomo Otomo the new otomo to place in the team
----@private
-function PartyTeam:_addOtomo(otomo)
+function PartyTeam:addOtomo(otomo)
     local otomoSlotID = otomo:getSlotInParty()
-    local team = self:getTeam()
+    local team = self:getMembers()
     team[otomoSlotID] = otomo
 
     -- table.insert(self:getTeam(), otomoSlotID, otomo)
 
     if self:getNbOtomoCurrentlyInTeam() == nil or self:getNbOtomoCurrentlyInTeam() == 0 then
-        self:_setNbOtomoCurrentlyInTeam(1)
+        self:setNbOtomoCurrentlyInTeam(1)
     end
 
-    self:_setNbOtomoCurrentlyInTeam(self:getNbOtomoCurrentlyInTeam() + 1)
+    self:setNbOtomoCurrentlyInTeam(self:getNbOtomoCurrentlyInTeam() + 1)
 end
 
 ---@param slotID number
----@private
-function PartyTeam:_removeOtomoBySlotID(slotID)
+function PartyTeam:removeOtomoBySlotID(slotID)
     -- self:getTeam()[slotID] =
-    table.remove(self:getTeam(), slotID)
+    table.remove(self:getMembers(), slotID)
     self._nbOtomoCurrentlyInTeam = self._nbOtomoCurrentlyInTeam - 1
 end
 
 ---@param otomo Otomo
----@private
-function PartyTeam:_replaceOtomo(otomo)
+function PartyTeam:updateOtomoByOtomo(otomo)
     local otomoSlotID = otomo:getSlotInParty()
-    self:getTeam()[otomoSlotID] = otomo
+    self:getMembers()[otomoSlotID] = otomo
 end
 
 ---@param otomo Otomo
 function PartyTeam:removeOtomo(otomo)
     local otomoSlotID = otomo:getSlotInParty()
-    self:_removeOtomoBySlotID(otomoSlotID)
+    self:removeOtomoBySlotID(otomoSlotID)
 end
 
 ---@param slotIndex number the index of the otomo to retrieve
----@return Otomo|nil otomo at the index or nil if none was found
+---@return Otomo otomo at the index or nil if none was found
 ---@private
-function PartyTeam:_getOtomoBySlotID(slotIndex)
-    if slotIndex < self.constants.MIN_PER_TEAM or slotIndex > self.constants.MAX_PER_TEAM then
+function PartyTeam:getOtomoBySlotID(slotIndex)
+    if slotIndex < constants.MIN_PER_TEAM or slotIndex > constants.MAX_PER_TEAM then
         error("indexing a wrong slotID")
-        return
     end
 
-    local currentTeam = self:getTeam()
+    local currentTeam = self:getMembers()
 
     if not currentTeam then
         error("team is empty")
     end
 
     if not currentTeam[slotIndex] then
-        print(string.format("index of the current team: %d", slotIndex))
         error("No otomo found at this index")
-        return
     end
+
     local otomo = currentTeam[slotIndex]
     return otomo
 end
 
 ---Update the otomo who is out
----@param newSlotID number the new @slotID
----@param oldSlotID number|nil the old @slotID or nil if its the first throw of the play time
----@private
-function PartyTeam:_updateCurrentlyOutOtomo(newSlotID, oldSlotID)
-    self:setCurrentlyOutOtomo(new)
-    ---@TODO: Maybe do some stuff with the @oldslotID
+---@param newSlotIndex number the new @slotID
+function PartyTeam:updateCurrentlyOutOtomo(newSlotIndex)
+    if newSlotId < constants.MIN_PER_TEAM or newSlotIndex > constants.MAX_PER_TEAM then
+        error("[PalDpsMeter] Your are ttying to update the outOtomo with a wrong Index")
+    end
+
+    self:setCurrentlyOutOtomo(newSlotIndex)
 end
 
 ---@return string|nil str the string to print
@@ -503,10 +523,16 @@ function PartyTeam:__tostring()
     str = string.format("nbOtomoInTeam: %d, currentlyOutOtomo: %d\n", self:getNbOtomoCurrentlyInTeam(),
         self:getCurrentlyOutOtomo())
     for i = 1, self:getNbOtomoCurrentlyInTeam(), 1 do
-        local otomo = self:_getOtomoBySlotID(i)
-        if not otomo then
-            return
+        ::continue::
+
+        -- if the one otomo is missing in the team in the first slots but in one of the last there is one
+        if not self:getMembers()[i] then
+            i = i +1
+            goto continue
         end
+
+        local otomo = self:getOtomoBySlotID(i)
+
         str = str .. string.format("TeamMember: [%s]\n", otomo:ToString())
     end
     return str
@@ -523,36 +549,68 @@ end
 --     end
 -- end
 
+--- Get the modified otomos between the actual Members (old/self) and the newTeam
+---@param newPartyTeam PartyTeam the new set of members
+---@return table modifiedOtomos the set of otomos to insert into the actual team
+function PartyTeam:getModifiedOtomos(newPartyTeam)
+    local modifiedOtomos = {}
+    local oldPartyTeamMembers = self:getMembers()
+    local newPartyTeamMembers = newPartyTeam:getMembers()
+
+    -- iterate over each combination of otomos to find which one has been modified
+    -- iterate each time by 1 to 5 because we can have only 1 otomo in the team in the last slot
+    for newIndex = constants.MIN_PER_TEAM, constants.MAX_PER_TEAM, 1 do
+        for oldIndex = constants.MIN_PER_TEAM, constants.MAX_PER_TEAM, 1 do
+            if not newPartyTeamMembers[newIndex]  then
+                break
+            end
+
+            if not oldPartyTeamMembers[oldIndex] then
+                break
+            end
+
+            if not newPartyTeamMembers[newIndex].isEqual(oldPartyTeamMembers[oldIndex]) then
+                table.insert(swappedOtomos, newOtomo)
+                break
+            end
+        end
+    end
+    return modifiedOtomos
+end
+
+--- get an update on the otomos that has been swapped off the team
+---@param newPartyTeam PartyTeam the complete set of the new team
+---@return table swappedOtomos A table containing the newly added otomos
+function PartyTeam:getNotSwappedOtomos(newPartyTeam)
+    local swappedOtomos = {}
+    local oldPartyTeamMembers = self:getMembers()
+    local newPartyTeamMembers = newPartyTeam:getMembers()
+
+    -- iterate over each combination of otomos to find which one has not been swapped
+    for newIndex, newOtomo in ipairs(newPartyTeamMembers) do
+        for oldIndex, oldOtomo in ipairs(oldPartyTeamMembers) do
+            if newOtomo.isEqual(oldOtomo) then
+                table.insert(swappedOtomos, newOtomo)
+                break
+            end
+        end
+    end
+    return swappedOtomos
+end
+
 --- Intercept when an otomo is throwing out and do what is necessary
----@param slotID number the @slotID of the otomo who is thrown out
-function PartyTeam:onActivateOtomo(slotID)
+--@param slotID number the @slotID of the otomo who is thrown out
+---@param self PartyTeam
+function PartyTeam:onActivateOtomo()
     local outOtomo = self:getCurrentlyOutOtomo()
-    if not outOtomo then
+    if outOtomo == -1 then
         print("[PalDpsMeter] No Otomo is out for now")
         return
     end
 
-    self:_updateCurrentlyOutOtomo(newSlotID, oldSlotID)
+    self:updateCurrentlyOutOtomo(newSlotID)
 
     ---@TODO: Do some stuff later when the code will be more advanced
-end
-
-
----@generic Player Interface
-local IPlayer = setmetatable({}, IPlayer)
-
---- Interface definition
----@param key string the name of the method called
-function IPlayer:__index(key)
-    if key == eventName.ActivateOtomo or
-        key == eventName.battleModeSwaped or
-        key == eventName.InactivateCurrentOtomo or
-        key == "notifyObservers" or
-        key == "registerObservers" then
-        error("Abstract method", key)
-    else
-        error("Invalid key for a Player")
-    end
 end
 
 ---@class Player The Subject of the observer pattern
@@ -562,9 +620,7 @@ local Player = {}
 
 --- Constructor
 function Player:new()
-    local player = o or {}
-    local observers = {}
-    setmetatable(player, { __index = IPlayer })
+    local player = setmetatable({}, self)
 
     -- create an empty team
     player.team = PartyTeam:new({})
@@ -573,42 +629,80 @@ function Player:new()
     return player
 end
 
---- Register an event to notify the observers
----@param observer any the observer object
-function Player:registerObserver(observer)
-    table.insert(observers, observer)
-end
-
---- Notify the observers
-function Player:notifyObservers()
-    for _, observer in ipairs(observers) do
-        observer:update(self)
-    end
-end
-
 ---@return PartyTeam team the team of the player
 function Player:getTeam()
-    return self._team
+    return self.team
 end
 
 ---@param team PartyTeam
 function Player:setTeam(team)
     self._team = team
-    self:notifyObservers()
 end
 
---- Hook function that retrieve the Team of a player
-function Player:retrievePartyMember()
+--- Test if the team is empty or not
+---@return boolean bool true if the team is empty and false otherwise
+function Player:isTeamEmpty()
+    local actualTeam = self:getTeam()
+    return not actualTeam
+end
+
+--- Update all the team by a new one
+---@param newPartyTeam PartyTeam
+---@param outOtomoSlotIndex integer
+function Player:updateAllTeam(newPartyTeam, outOtomoSlotIndex)
+    self:setTeam(newPartyTeam)
+    newPartyTeam:setNbOtomoCurrentlyInTeam(#newPartyTeam)
+    newPartyTeam:setCurrentlyOutOtomo(outOtomoSlotIndex)
+end
+
+---@param self Player
+---@param newPartyTeam PartyTeam the new PartTeam
+---@param outOtomoSlotIndex integer the slot index of thrown out otomo
+---@private
+function Player:updateTeam(newPartyTeam, outOtomoSlotIndex)
+
+    if self:isTeamEmpty() then
+        self:updateAllTeam(newPartyTeam, outOtomoSlotIndex)
+    else
+        -- test if olny a few have changed and update them
+        local modifiedOtomos = Player:getTeam():getModifiedOtomos(newPartyTeam)
+
+        -- used with the recursive version of the function which is not implemented
+        -- swapedOtomos = Player.getRecursiveSwapedOtomos(newPartyTeam:getMembers(),
+        --     oldPartyTeam:getMembers(), constants.MIN_PER_TEAM,
+        --     constants.MAX_PER_TEAM, {})
+
+        if not modifiedOtomos[1] then
+            -- Not nil then swap the otomos as needed
+            -- What I got => oldTeam, newTeam and NotSwappedOtomos from oldTeam
+            for _, otomo in ipairs(modifiedOtomos) do
+                self:getTeam():updateOtomoByOtomo(otomo)
+            end
+            -- return to leave the function
+            return
+        end
+
+        -- if nil then it's a complete different team and we need to modify it all
+        self:updateAllTeam(newPartyTeam, outOtomoSlotIndex)
+    end
+end
+
+--Hook function that retrieve the Team of a player
+function Player:retrievePartyMemberHook()
     RegisterHook(
         "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:ActivateOtomo",
-        function(component, SlotID, StartTransform, isSuccess)
-            local otomos = {}
+        function(component, slotID, StartTransform, isSuccess)
             if not isSuccess then
                 return
             end
+
+            local otomos = {}
+
+            ---@diagnostic disable-next-line: undefined-field
             local HolderComponent = component:get()
             local tmpOtomo = nil
             local slots = HolderComponent.CharacterContainer.SlotArray
+
             slots:ForEach(function(index, elem)
                 if not elem:get():isEmpty() then
                     local slot = elem:get()
@@ -621,15 +715,16 @@ function Player:retrievePartyMember()
 
                     -- print(string.format("instanceID: %i", ID:GetStructAddress()))
                     local otomoUID = OtomoUniqueId:new(ID:GetStructAddress())
-                    tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, otomoUID,0, 0)
+                    tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, otomoUID, 0, 0)
 
                     otomos[index] = tmpOtomo
                 end
             end)
+
             local foundTeam = PartyTeam:new(otomos)
             print(foundTeam:ToString())
-
-
+            self:updateTeam(foundTeam,slotID:get() + 1)
+            print(self:getTeam():ToString())
 
 
 
@@ -639,7 +734,7 @@ function Player:retrievePartyMember()
                     if its a new team update and if its the same fight update accordingly
                 ]]
 
-            -- self:notifyObservers()
+             self:notifyObservers()
         end)
 end
 
@@ -662,49 +757,47 @@ end
 
 
 
---- Retrieve the Otomo that is out, get reexecuted each time another is out
----@return string | nil OtomoCharacterID return the string of the characterID if found and nil otherwise
---- FIXME it need to be on the observer feature
-local function ActiveOtomo()
-    local activeOtomo = nil
-    RegisterHook(
-        "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:ActivateOtomo",
-        function(self, SlotID, StartTransform, isSuccess)
-            if not isSuccess then
-                return
-            end
-            local slotID = SlotID:get()
-            print(string.format("[PalDpsMeter] The slot id of the Otomo is : %d", slotID))
+-- Retrieve the Otomo that is out, get reexecuted each time another is out
+-- @return string | nil OtomoCharacterID return the string of the characterID if found and nil otherwise
+--local function ActiveOtomo()
+--    local activeOtomo = nil
+--    RegisterHook(
+--        "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:ActivateOtomo",
+--        function(_, SlotID, StartTransform, isSuccess)
+--            if not isSuccess then
+--                return
+--            end
+--            local slotID = SlotID:get()
+--            print(string.format("[PalDpsMeter] The slot id of the Otomo is : %d", slotID))
+--
+--            local HolderComponent = OtomoUniqueId:get()
+--            local otomoCharacter = HolderComponent:TryGetOtomoActorBySlotIndex(slotID)
+--            local OtomoParameterComponent = otomoCharacter.CharacterParameterComponent
+--            local OtomoIndividualParameter = OtomoParameterComponent:GetIndividualParameter()
+--            activeOtomo = OtomoIndividualParameter:GetCharacterID()
+--
+--            print(string.format("[PalDpsMeter] The out Otomo is: %s of slot %d", activeOtomo:ToString(), slotID))
+--            -- return OtomoCharacterID:ToString()
+--            Event.Trigger("on_swap_otomo", activeOtomo:ToString(), slotID)
+--        end)
+--end
 
-            local HolderComponent = OtomoUniqueId:get()
-            local otomoCharacter = HolderComponent:TryGetOtomoActorBySlotIndex(slotID)
-            local OtomoParameterComponent = otomoCharacter.CharacterParameterComponent
-            local OtomoIndividualParameter = OtomoParameterComponent:GetIndividualParameter()
-            activeOtomo = OtomoIndividualParameter:GetCharacterID()
-
-            print(string.format("[PalDpsMeter] The out Otomo is: %s of slot %d", activeOtomo:ToString(), slotID))
-            -- return OtomoCharacterID:ToString()
-            Event.Trigger("on_swap_otomo", activeOtomo:ToString(), slotID)
-        end)
-end
-
---- Only retrie the moment a player deactivate his otomo
+--- Only retrieve the moment a player deactivate his otomo
 -- FIXME it needs to be on the observer feature
-local function InactivateCurrentOtomo()
-    RegisterHook(
-        "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:InactivateCurrentOtomo",
-        function(self)
-            Event.Trigger(eventName.onInactivateCurrentOtomo)
-        end)
-end
+--local function InactivateCurrentOtomo()
+--    RegisterHook(
+--        "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:InactivateCurrentOtomo",
+--        function(self)
+--            Event.Trigger(eventName.onInactivateCurrentOtomo)
+--        end)
+--end
+--
+--local function getPartyMember()
+--    RegisterHook("/Script/Pal.PalPlayerPartyPalHolder:GetPartyMember", function(self, OutPartyMember)
+--    end)
+--end
 
-local function getPartyMember()
-    RegisterHook("/Script/Pal.PalPlayerPartyPalHolder:GetPartyMember", function(self, OutPartyMember)
-        ---@TODO: Create a class to handle this myself and populate all the needed data more precisely
-    end)
-end
-
---- Is being trigger only when battlemode is ON
+-- Is being trigger only when battle mode is ON
 -- local function whenBattleModeIsOn()
 --     local preIdIsBattleMode, postIdIsBattleMode = RegisterHook("/Script/Pal.PalAICombatModule:IsBattleMode",
 --         function(self, value)
@@ -719,11 +812,10 @@ end
 -- end
 
 --##################################################--
---################### Main ####################--
+--##################### Main #######################--
 --##################################################--
 
 local player = Player:new()
-
 
 ExecuteAsync(function()
     local HUDService = FindFirstOf("PalHUDService")
@@ -732,16 +824,16 @@ ExecuteAsync(function()
         -- retrieveActiveOtomo()
         -- retrieveInactivateOtomo()
         -- whenBattleModeIsOn()
-        Player:retrievePartyMember()
+        player:retrievePartyMemberHook()
 
         return
     end
 
-    NotifyOnNewObject("/Script/Pal.PalHUDService", function(context)
+    NotifyOnNewObject("/Script/Pal.PalHUDService", function()
         -- retrieveActiveOtomo()
         -- retrieveInactivateOtomo()
         -- whenBattleModeIsOn()
-        Player:retrievePartyMember()
+        player:retrievePartyMemberHook()
     end)
 end)
 
