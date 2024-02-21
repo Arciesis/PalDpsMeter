@@ -32,16 +32,6 @@ local eventName = require "eventName"
 --##################################################--
 
 
--- isFirstPressed = true
----@type nil|string
-LAST_OTOMO_OUT = nil
-
----@type number
-LAST_SLOT_ID = -1
-
----@type boolean
-LAST_BATTLE_MODE = false
-
 
 --##################################################--
 --##################### Utils ######################--
@@ -134,102 +124,6 @@ end
 --################## Classes like ##################--
 --##################################################--
 
-Event = {}
-
-local events = {}
-
-
--- accepts any amount and type of arguments after the event name
--- NOTE: triggered events have no guaranteed order in which callback objects are called
-function Event.Trigger(eventname, ...)
-    local eventlist = events[eventname] or {}
-
-    for obj, callback in pairs(eventlist) do
-        if type(obj) == "function" then
-            obj(eventname, ...)
-        elseif obj[eventname] then
-            obj[eventname](obj, eventname, ...)
-        elseif obj.OnEvent then
-            obj:OnEvent(eventname, ...)
-        end
-    end
-end
-
--- can register multiple events at the same time
--- any arguments after the object are treated as event names to be registered
-function Event.Register(obj, ...)
-    if not obj then
-        return error("Event.Register error: nil callback object", 2)
-    end
-
-    local eventnames = type(...) == "table" and ... or { ... }
-
-    if #eventnames == 0 then
-        return error("Event.Register error: nil event name", 2)
-    end
-
-    for i, eventname in ipairs(eventnames) do
-        if type(eventname) == "string" then
-            local eventlist = events[eventname]
-
-            if not eventlist then
-                eventlist = {}
-                setmetatable(eventlist, { __mode = "k" }) -- weak keys so garbage collector can clean up properly
-            end
-
-            if type(obj) ~= "function" and type(obj) ~= "table" then
-                return error("Event.Register error: callback object is not a table or function", 2)
-            end
-
-            eventlist[obj] = true
-            events[eventname] = eventlist
-        end
-    end
-
-    return obj
-end
-
--- can unregister multiple events at the same time
--- any arguments after the object are treated as event names to be unregistered
-function Event.Unregister(obj, ...)
-    if not obj then
-        return error("Event.Unregister error: nil callback object", 2)
-    end
-
-    local eventnames = type(...) == "table" and ... or { ... }
-
-    if #eventnames == 0 then
-        return error("Event.Unregister error: nil event name", 2)
-    end
-
-    for i, eventname in ipairs(eventnames) do
-        local eventlist = events[eventname]
-        if eventlist and eventlist[obj] then
-            eventlist[obj] = nil
-        end
-    end
-end
-
--- returns array of event names registered to an object
-function Event.LookUp(obj)
-    if type(obj) ~= "table" and type(obj) ~= "function" then
-        return error("Event.LookUp error: callback object is not a table or function", 2)
-    end
-
-    local registeredevents = {}
-
-    for eventname, eventlist in pairs(events) do
-        for _obj, callback in pairs(eventlist) do
-            if obj == _obj then
-                table.insert(registeredevents, eventname)
-                break
-            end
-        end
-    end
-
-    return registeredevents
-end
-
 --- Representation of a Guid each number is 32bit long which give a us 128 bit
 ---@class Guid
 ---@field A integer
@@ -294,6 +188,7 @@ function Guid:__tostring()
 end
 
 --- Return a string representing the data inside the @Guid
+---@return string str
 function Guid:ToString()
     return self:__tostring()
 end
@@ -309,7 +204,7 @@ function Guid:isEqual(otherGuid)
     end
 end
 
---- Represent the in game data of a PalInstanceID, in addition we got the struct address to test unicity
+--- Represent an unique id for otomo, it's actually the address of a ScriptStruct: PalInstanceId
 ---@class OtomoUniqueId
 ---@field Addr integer
 local OtomoUniqueId = {
@@ -366,16 +261,15 @@ end
 ---@TODO Make a damage class with the stuff needed I think
 ---@field damageTaken number
 ---@field damageInfilcted number
-local Otomo = {
-}
+local Otomo = {}
 
 --- Constructor like for the class
 ---@param o any object itself, passe nil to create a new one
 ---@param characterID string @characterID represent The pal name in the datatables
 ---@param slotInParty integer @slotInParty represent the slot in the party (Biggining at 0)
 ---@param uid OtomoUniqueId The Unique id of the otomo (Aka an address of its ID in the game)
----@param damageTaken integer|nil @damageTaken represent the amount of real damage it has taken during a fight
----@param damageInflicted integer|nil @damageInflicted represent the real amount of damage the it has inflicted
+---@param damageTaken number|nil @damageTaken represent the amount of real damage it has taken during a fight
+---@param damageInflicted number|nil @damageInflicted represent the real amount of damage the it has inflicted
 function Otomo:new(o, characterID, slotInParty, uid, damageTaken, damageInflicted)
     local otomo = o or {}
     otomo = setmetatable(otomo, self)
@@ -390,11 +284,11 @@ function Otomo:new(o, characterID, slotInParty, uid, damageTaken, damageInflicte
     return otomo
 end
 
+--- Internal tostring
+---@return string str the representation of the data
 function Otomo:__tostring()
     local damageTaken = self:getDamageTaken()
     local damageInflicted = self:getDamageInflicted()
-
-    print("%s", type(damageTaken))
 
     if damageTaken == -1 then
         damageTaken = 0
@@ -406,19 +300,22 @@ function Otomo:__tostring()
 
     local uidStr = self:getUid():ToString()
 
-    return (string.format("Name: %s,\t slootIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t Guid: %s", self:getCharacterID(),
+    return (string.format("Name: %s,\t slootIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t %s", self:getCharacterID(),
         self:getSlotInParty(), damageTaken, damageInflicted, uidStr))
 end
 
+--- ToString method
+---@return string str the representation of the data
 function Otomo:ToString()
     return self:__tostring()
 end
 
+---@return string characterID The ID of the otomo (e.g. teh species)
 function Otomo:getCharacterID()
     return self.characterID
 end
 
----@return number _slotInParty
+---@return number slotInParty the
 function Otomo:getSlotInParty()
     return self.slotInParty
 end
@@ -428,10 +325,12 @@ function Otomo:getUid()
     return self.uid
 end
 
+---@return number damageTaken the damage taken by that otomo during a fight
 function Otomo:getDamageTaken()
     return self.damageTaken
 end
 
+---@return number damageInflicted the damage inflicted by that otomo duriong a fight
 function Otomo:getDamageInflicted()
     return self.damageInflicted
 end
@@ -444,34 +343,31 @@ end
 --     self.slotInParty = newSlotInParty
 -- end
 
+--- Setter of damageTaken
+---@param newDamageTaken number the new amount of damage taken by that otomo during a fight
 function Otomo:setDamageTaken(newDamageTaken)
     self.damageTaken = newDamageTaken
 end
 
+--- setter of damageInflicted
+---@param newDamageInflicted number the new amount of damage inflicted by that otomo during a fight
 function Otomo:setDamageInflicted(newDamageInflicted)
     self.damageInflicted = newDamageInflicted
 end
 
+--- Return if the two otomos are the same
+---@param otherOtomo Otomo
+---@return boolean isSame Return true if they are the sme and false otherwise
 function Otomo:isSame(otherOtomo)
-    return (self:getUid():getAddr() == otherOtomo:getUid():isEqual())
-end
-
-function Otomo:__index(key)
-    if string.sub(key, 1, 1) == "_" then
-        error("Attempting to access private member:", key)
-    end
+    local otherUId = otherOtomo:getUid()
+    return (self:getUid():isEqual(othereUId))
 end
 
 ---@class PartyTeam that represent the team of otomo that the player cary
 ---@field team table a table that contains all of the otomo in the team of the player
 ---@field currentlyOutOtomo number the out otomo or -1 if none
 ---@field nbOtomoCurrentlyInTeam number The number of otomo currently in the team
-local PartyTeam = {
-    team = {},
-    currentlyOutOtomo = -1,
-    nbOtomoCurrentlyInTeam = -1,
-
-}
+local PartyTeam = {}
 
 ---@param otomos table The otomos that are in the team, can be 1 to 5
 function PartyTeam:new(otomos)
@@ -482,8 +378,8 @@ function PartyTeam:new(otomos)
     self.constants.MAX_PER_TEAM = 5
 
     self._team = otomos
-    self._currentlyOutOtomo = -1 ---@TODO: Need to be hooked
-    self._nbOtomoCurrentlyInTeam = #self._team ---@TODO: Need to be hooked too
+    self._currentlyOutOtomo = -1 ---@TODO: Need to be notify
+    self._nbOtomoCurrentlyInTeam = #self._team
 
 
     return party
@@ -641,8 +537,12 @@ function PartyTeam:onActivateOtomo(slotID)
     ---@TODO: Do some stuff later when the code will be more advanced
 end
 
-local IPlayer = setmetatable({}, OtomoUniqueId)
 
+---@generic Player Interface
+local IPlayer = setmetatable({}, IPlayer)
+
+--- Interface definition
+---@param key string the name of the method called
 function IPlayer:__index(key)
     if key == eventName.ActivateOtomo or
         key == eventName.battleModeSwaped or
@@ -658,35 +558,35 @@ end
 ---@class Player The Subject of the observer pattern
 ---@field team PartyTeam
 ---@field observers table
-local Player = {
-    _team = {},
-    _observers = {}
-}
+local Player = {}
+
 --- Constructor
----@param o any
-function Player:new(o)
+function Player:new()
     local player = o or {}
     local observers = {}
-    setmetatable(Player, { __index = IPlayer })
+    setmetatable(player, { __index = IPlayer })
 
-    local _team = PartyTeam:new({})
-    local _observers = {} or nil
-    player._team = _team
-    player._observers = _observers
+    -- create an empty team
+    player.team = PartyTeam:new({})
+    player.observers = {}
+
     return player
 end
 
+--- Register an event to notify the observers
+---@param observer any the observer object
 function Player:registerObserver(observer)
     table.insert(observers, observer)
 end
 
+--- Notify the observers
 function Player:notifyObservers()
     for _, observer in ipairs(observers) do
         observer:update(self)
     end
 end
 
----@return PartyTeam
+---@return PartyTeam team the team of the player
 function Player:getTeam()
     return self._team
 end
@@ -697,6 +597,7 @@ function Player:setTeam(team)
     self:notifyObservers()
 end
 
+--- Hook function that retrieve the Team of a player
 function Player:retrievePartyMember()
     RegisterHook(
         "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:ActivateOtomo",
@@ -821,7 +722,7 @@ end
 --################### Main ####################--
 --##################################################--
 
-local player = Player:new(nil)
+local player = Player:new()
 
 
 ExecuteAsync(function()
