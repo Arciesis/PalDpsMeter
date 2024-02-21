@@ -232,10 +232,10 @@ end
 
 --- Representation of a Guid each number is 32bit long which give a us 128 bit
 ---@class Guid
----@field A number
----@field B number
----@field C number
----@field D number
+---@field A integer
+---@field B integer
+---@field C integer
+---@field D integer
 local Guid = {
     A = 0,
     B = 0,
@@ -244,10 +244,10 @@ local Guid = {
 }
 
 ---Constructor of the class
----@param A number
----@param B number
----@param C number
----@param D number
+---@param A integer
+---@param B integer
+---@param C integer
+---@param D integer
 function Guid:new(A, B, C, D)
     local guid = {}
     guid = setmetatable(guid, self)
@@ -262,25 +262,25 @@ function Guid:new(A, B, C, D)
 end
 
 --- A field Getter
----@return number A
+---@return integer A
 function Guid:getA()
     return self._A
 end
 
 --- B field Getter
----@return number B
+---@return integer B
 function Guid:getB()
     return self._B
 end
 
 --- C field Getter
----@return number C
+---@return integer C
 function Guid:getC()
     return self._C
 end
 
 --- D field Getter
----@return number D
+---@return integer D
 function Guid:getD()
     return self._D
 end
@@ -302,40 +302,90 @@ end
 ---@param otherGuid Guid the other @Guid to test
 ---@return boolean isEqual
 function Guid:isEqual(otherGuid)
-    if self:getA() == otherGuid:getA() and self:getB() == otherGuid:getB() and self:getC() == otherGuid:getC() and self:getD() == otherGuid:getD()  then
+    if self:getA() == otherGuid:getA() and self:getB() == otherGuid:getB() and self:getC() == otherGuid:getC() and self:getD() == otherGuid:getD() then
         return true
     else
         return false
     end
 end
 
+--- Represent the in game data of a PalInstanceID, in addition we got the struct address to test unicity
+---@class OtomoUniqueId
+---@field Addr integer
+local OtomoUniqueId = {
+}
+
+--- Constructor of a PalInstanceID
+---@param structAddr integer
+---@return OtomoUniqueId palInstanceId the class
+function OtomoUniqueId:new(structAddr)
+    local OtomoUId = {}
+    OtomoUId = setmetatable(OtomoUId, self)
+    self.__index = self
+
+    OtomoUId.Addr = structAddr
+
+    return OtomoUId
+end
+
+--- getter of the structAddr property
+---@return integer theStructAddr
+function OtomoUniqueId:getAddr()
+    return self.Addr
+end
+
+--- internal tostring method
+---@return string str
+---@private
+function OtomoUniqueId:__tostring()
+    return string.format("OtomoUinique Identifier: %i", self:getAddr())
+end
+
+--- ToString method
+---@return string str the string representing the data
+function OtomoUniqueId:ToString()
+    return self:__tostring()
+end
+
+--- Test if two Instances of this class are isEqual
+---@param otherUId OtomoUniqueId
+---@return boolean bool true if there are equal and false otherwise
+function OtomoUniqueId:isEqual(otherUId)
+    if self:getAddr() == 0 or otherUId:getAddr() == 0 then
+        return false
+    end
+
+    return (self:getAddr() == otherUId:getAddr())
+end
+
+
 ---@class Otomo
 ---@field characterID string|nil
 ---@field slotInParty number|nil
+---@field uid OtomoUniqueId|nil
+---@TODO Make a damage class with the stuff needed I think
 ---@field damageTaken number
 ---@field damageInfilcted number
 local Otomo = {
-    characterID = nil,
-    slotInParty = -1,
-    damageTaken = -1,
-    damageInflicted = -1
 }
 
 --- Constructor like for the class
 ---@param o any object itself, passe nil to create a new one
 ---@param characterID string @characterID represent The pal name in the datatables
----@param slotInParty number @slotInParty represent the slot in the party (Biggining at 0)
----@param damageTaken number|nil @damageTaken represent the amount of real damage it has taken during a fight
----@param damageInflicted number|nil @damageInflicted represent the real amount of damage the it has inflicted
-function Otomo:new(o, characterID, slotInParty, damageTaken, damageInflicted)
+---@param slotInParty integer @slotInParty represent the slot in the party (Biggining at 0)
+---@param uid OtomoUniqueId The Unique id of the otomo (Aka an address of its ID in the game)
+---@param damageTaken integer|nil @damageTaken represent the amount of real damage it has taken during a fight
+---@param damageInflicted integer|nil @damageInflicted represent the real amount of damage the it has inflicted
+function Otomo:new(o, characterID, slotInParty, uid, damageTaken, damageInflicted)
     local otomo = o or {}
     otomo = setmetatable(otomo, self)
     self.__index = self
 
-    otomo._characterID = characterID or nil
-    otomo._slotInParty = slotInParty or -1
-    otomo._damageTaken = damageTaken or -1
-    otomo._damageInflicted = damageInflicted or -1
+    otomo.characterID = characterID
+    otomo.slotInParty = slotInParty
+    otomo.uid = uid
+    otomo.damageTaken = damageTaken or -1
+    otomo.damageInflicted = damageInflicted or -1
 
     return otomo
 end
@@ -344,17 +394,20 @@ function Otomo:__tostring()
     local damageTaken = self:getDamageTaken()
     local damageInflicted = self:getDamageInflicted()
 
+    print("%s", type(damageTaken))
 
-    if not damageTaken == -1 then
+    if damageTaken == -1 then
         damageTaken = 0
     end
 
-    if not damageInflicted == -1 then
+    if damageInflicted == -1 then
         damageInflicted = 0
     end
 
-    return (string.format("Name: %s,\t slootIndex: %d,\t damageTaken: %d,\t damageInflicted: %d", self:getCharacterID(),
-        self:getSlotInParty(), damageTaken, damageInflicted))
+    local uidStr = self:getUid():ToString()
+
+    return (string.format("Name: %s,\t slootIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t Guid: %s", self:getCharacterID(),
+        self:getSlotInParty(), damageTaken, damageInflicted, uidStr))
 end
 
 function Otomo:ToString()
@@ -362,36 +415,45 @@ function Otomo:ToString()
 end
 
 function Otomo:getCharacterID()
-    return self._characterID
+    return self.characterID
 end
 
 ---@return number _slotInParty
 function Otomo:getSlotInParty()
-    return self._slotInParty
+    return self.slotInParty
+end
+
+---@return OtomoUniqueId uid the guid of the otomo
+function Otomo:getUid()
+    return self.uid
 end
 
 function Otomo:getDamageTaken()
-    return self._damageTaken
+    return self.damageTaken
 end
 
 function Otomo:getDamageInflicted()
-    return self._damageInflicted
+    return self.damageInflicted
 end
 
-function Otomo:setCharacterID(newCharacterID)
-    self._characterID = newCharacterID
-end
+-- function Otomo:setCharacterID(newCharacterID)
+--     self.characterID = newCharacterID
+-- end
 
-function Otomo:setSlotInParty(newSlotInParty)
-    self._slotInParty = newSlotInParty
-end
+-- function Otomo:setSlotInParty(newSlotInParty)
+--     self.slotInParty = newSlotInParty
+-- end
 
 function Otomo:setDamageTaken(newDamageTaken)
-    self._damageTaken = newDamageTaken
+    self.damageTaken = newDamageTaken
 end
 
 function Otomo:setDamageInflicted(newDamageInflicted)
-    self._damageInflicted = newDamageInflicted
+    self.damageInflicted = newDamageInflicted
+end
+
+function Otomo:isSame(otherOtomo)
+    return (self:getUid():getAddr() == otherOtomo:getUid():isEqual())
 end
 
 function Otomo:__index(key)
@@ -579,7 +641,7 @@ function PartyTeam:onActivateOtomo(slotID)
     ---@TODO: Do some stuff later when the code will be more advanced
 end
 
-local IPlayer = setmetatable({}, self)
+local IPlayer = setmetatable({}, OtomoUniqueId)
 
 function IPlayer:__index(key)
     if key == eventName.ActivateOtomo or
@@ -643,32 +705,28 @@ function Player:retrievePartyMember()
             if not isSuccess then
                 return
             end
-            -- local isOtomoPresent = true
             local HolderComponent = component:get()
-            -- local otomoCount = HolderComponent:GetOtomoCount()
             local tmpOtomo = nil
             local slots = HolderComponent.CharacterContainer.SlotArray
             slots:ForEach(function(index, elem)
                 if not elem:get():isEmpty() then
-                    local otomoHandle = elem:get():GetHandle()
-                    local otomoIndividualParameter = otomoHandle:TryGetIndividualParameter()
+                    local slot = elem:get()
+                    local handle = slot:GetHandle()
+                    local otomoIndividualParameter = handle:TryGetIndividualParameter()
                     local otomoID = otomoIndividualParameter:GetCharacterID()
-                    tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, nil, nil)
-                    -- print(tmpOtomo:ToString())
+
+                    --In game FPalInstanceID representation: Guid: InstanceId / Guid: PlayerUId / Guid: DebugName
+                    local ID = otomoIndividualParameter.IndividualId
+
+                    -- print(string.format("instanceID: %i", ID:GetStructAddress()))
+                    local otomoUID = OtomoUniqueId:new(ID:GetStructAddress())
+                    tmpOtomo = Otomo:new(nil, otomoID:ToString(), index, otomoUID,0, 0)
+
                     otomos[index] = tmpOtomo
-                    local PalInstanceId = otomoIndividualParameter.IndividualId
-                    local test = PalInstanceId.instanceId
-                    local a = test.A
-                    local b = test.B
-                    local c = test.C
-                    local d= test.D
-                    print(string.format("A: %d,\t B: %d,\t C: %d,\t D: %d", a, b, c, d))
                 end
             end)
-
             local foundTeam = PartyTeam:new(otomos)
-
-
+            print(foundTeam:ToString())
 
 
 
@@ -683,7 +741,6 @@ function Player:retrievePartyMember()
             -- self:notifyObservers()
         end)
 end
-
 
 --##################################################--
 --################### Registers ####################--
@@ -718,7 +775,7 @@ local function ActiveOtomo()
             local slotID = SlotID:get()
             print(string.format("[PalDpsMeter] The slot id of the Otomo is : %d", slotID))
 
-            local HolderComponent = self:get()
+            local HolderComponent = OtomoUniqueId:get()
             local otomoCharacter = HolderComponent:TryGetOtomoActorBySlotIndex(slotID)
             local OtomoParameterComponent = otomoCharacter.CharacterParameterComponent
             local OtomoIndividualParameter = OtomoParameterComponent:GetIndividualParameter()
