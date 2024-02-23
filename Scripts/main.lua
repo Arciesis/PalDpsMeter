@@ -2,7 +2,6 @@
 -- FunctionName => function name from UE4SS
 -- Callback => our function callback
 print("[PalDpsMeter] Pal DPS Meter has started!")
-print(_VERSION)
 -- RegisterHook(FunctionName, Callback)
 -- FunctionName => function name from UE4SS
 -- Callback => our function callback
@@ -23,12 +22,12 @@ print(_VERSION)
 
 -- otomo.GetBattleMode
 
-local Config = require("config")
-local EventName = require("eventName")
-local OtomoUniqueId = require("otomoUniqueId")
-local Otomo = require("Otomo")
-local PartyTeam = require("partyTeam")
-local PlayerClass = require("player")
+--local Config = require("config")
+--local EventName = require("eventName")
+--local OtomoUniqueId = require("otomoUniqueId")
+--local Otomo = require("Otomo")
+--local PartyTeam = require("partyTeam")
+local player = require("player")
 --##################################################--
 --################### Constants ####################--
 --##################################################--
@@ -322,28 +321,27 @@ local PlayerClass = require("player")
 --##################### Main #######################--
 --##################################################--
 
---- @type Player
-local player = PlayerClass.new()
+local main_player = player.new()
 
 ExecuteAsync(function()
-   local HUDService = FindFirstOf("PalHUDService")
+    local HUDService = FindFirstOf("PalHUDService")
 
-   if HUDService ~= nil and HUDService:IsValid() then
-      -- retrieveActiveOtomo()
-      -- retrieveInactivateOtomo()
-      -- whenBattleModeIsOn()
-      player:retrievePartyMemberHook()
+    if HUDService ~= nil and HUDService:IsValid() then
+        -- retrieveActiveOtomo()
+        -- retrieveInactivateOtomo()
+        -- whenBattleModeIsOn()
+        main_player:retrievePartyMemberHook()
 
-      return
-   end
+        return
+    end
 
-   -- don't really know what is the purpose of this, most likely for the server part
-   NotifyOnNewObject("/Script/Pal.PalHUDService", function()
-      -- retrieveActiveOtomo()
-      -- retrieveInactivateOtomo()
-      -- whenBattleModeIsOn()
-      --player:retrievePartyMemberHook()
-   end)
+    -- don't really know what is the purpose of this, most likely for the server part
+    NotifyOnNewObject("/Script/Pal.PalHUDService", function()
+        -- retrieveActiveOtomo()
+        -- retrieveInactivateOtomo()
+        -- whenBattleModeIsOn()
+        --player:retrievePartyMemberHook()
+    end)
 end)
 
 --- If I can make it work with the guy method then I should go for it otherwise doesn't matter

@@ -3,36 +3,34 @@
 --- Created by arciesis.
 --- DateTime: 2/22/24 5:17 PM
 ---
-local OtomoUniqueId = require("otomoUniqueId")
+--local OtomoUniqueId = require("otomoUniqueId")
 
 --- @module PalDpsMeter.otomo
 local otomo = {}
 
 -- TODO: Make a damage class with the stuff needed I think
 --- @class Otomo
---- @field characterID string
---- @field slotInParty number
---- @field uid OtomoUniqueId
---- @field damageTaken number
---- @field damageInflicted number
+--- @field character_id string
+--- @field slot_in_party number
+--- @field unique_id OtomoUniqueId
+--- @field damage_taken number
+--- @field damage_inflicted number
 --- @type Otomo
 local Otomo = {}
 
 --- Internal tostring
 --- @return string the representation of the data
 function Otomo:__tostring()
-   local damageTaken = self:getDamageTaken()
-   local damageInflicted = self:getDamageInflicted()
+   local damage_taken = self:get_damage_taken()
+   local damage_inflicted = self:get_damage_inflicted()
 
-   if damageTaken == -1 then
-      damageTaken = 0
+   if damage_taken == -1 then
+      damage_taken = 0
    end
-
-   if damageInflicted == -1 then
-      damageInflicted = 0
+   if damage_inflicted == -1 then
+      damage_inflicted = 0
    end
-
-   local uniqueId = self:getUid()
+   local uniqueId = self:get_unique_id()
    --if not uniqueId then
    --   return (
    --         string.format(
@@ -45,17 +43,14 @@ function Otomo:__tostring()
    --         )
    --   )
    --end
-   local uidStr = uniqueId:ToString()
 
-   return (
-         string.format(
-               "Name: %s,\t slotIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t %s",
-               self:getCharacterID(),
-               self:getSlotInParty(),
-               damageTaken,
-               damageInflicted,
-               uidStr
-         )
+   return string.format(
+         "Name: %s,\t slotIndex: %i,\t damageTaken: %i,\t damageInflicted: %i,\t %s",
+         self:get_character_id(),
+         self:get_slot_in_party(),
+         damage_taken,
+         damage_inflicted,
+         uniqueId:ToString()
    )
 end
 
@@ -67,30 +62,30 @@ end
 
 --- Getter of the class for
 --@return string characterID The ID of the otomo (e.g. teh species)
-function Otomo:getCharacterID()
-   return self.characterID
+function Otomo:get_character_id()
+   return self.character_id
 end
 
 --- Getter
 --@return number slotInParty the
-function Otomo:getSlotInParty()
-   return self.slotInParty
+function Otomo:get_slot_in_party()
+   return self.slot_in_party
 end
 
 --- Getter
 --@return OtomoUniqueId uid the guid of the otomo
-function Otomo:getUid()
-   return self.uid
+function Otomo:get_unique_id()
+   return self.unique_id
 end
 
 ---@return number damageTaken the damage taken by that otomo during a fight
-function Otomo:getDamageTaken()
-   return self.damageTaken
+function Otomo:get_damage_taken()
+   return self.damage_taken
 end
 
 ---@return number damageInflicted the damage inflicted by that otomo during a fight
-function Otomo:getDamageInflicted()
-   return self.damageInflicted
+function Otomo:get_damage_inflicted()
+   return self.damage_inflicted
 end
 
 -- function Otomo:setCharacterID(newCharacterID)
@@ -102,40 +97,40 @@ end
 -- end
 
 --- Setter of damageTaken
----@param newDamageTaken number the new amount of damage taken by that otomo during a fight
-function Otomo:setDamageTaken(newDamageTaken)
-   self.damageTaken = newDamageTaken
+---@param new_damage_taken number the new amount of damage taken by that otomo during a fight
+function Otomo:set_damage_taken(new_damage_taken)
+   self.damage_taken = new_damage_taken
 end
 
 --- setter of damageInflicted
----@param newDamageInflicted number the new amount of damage inflicted by that otomo during a fight
-function Otomo:setDamageInflicted(newDamageInflicted)
-   self.damageInflicted = newDamageInflicted
+---@param new_damage_inflicted number the new amount of damage inflicted by that otomo during a fight
+function Otomo:set_damage_inflicted(new_damage_inflicted)
+   self.damage_inflicted = new_damage_inflicted
 end
 
 --- Return if the two otomos are the same
----@param otherOtomo Otomo
+---@param other_otomo Otomo
 ---@return boolean isSame Return true if they are the sme and false otherwise
-function Otomo:isSame(otherOtomo)
-   local otherUniqueId = otherOtomo:getUid()
-   return (self:getUid():isEqual(otherUniqueId))
+function Otomo:is_same(other_otomo)
+   local other_unique_id = other_otomo:get_unique_id()
+   return (self:get_unique_id():is_equal(other_unique_id))
 end
 
 --- Constructor like for the class
---- @param characterID string @characterID represent The pal name in the datatables
---- @param slotInParty number @slotInParty represent the slot in the party (Beginning at 0)
---- @param uid OtomoUniqueId The Unique id of the otomo (Aka an address of its ID in the game)
---- @param damageTaken number|nil @damageTaken represent the amount of real damage it has taken during a fight
---- @param damageInflicted number|nil @damageInflicted represent the real amount of damage the it has inflicted
-function otomo.new(characterID, slotInParty, uid, damageTaken, damageInflicted)
+--- @param character_id string @characterID represent The pal name in the datatables
+--- @param slot_in_party number @slotInParty represent the slot in the party (Beginning at 0)
+--- @param unique_id OtomoUniqueId The Unique id of the otomo (Aka an address of its ID in the game)
+--- @param damage_taken number|nil @damageTaken represent the amount of real damage it has taken during a fight
+--- @param damage_inflicted number|nil @damageInflicted represent the real amount of damage the it has inflicted
+function otomo.new(character_id, slot_in_party, unique_id, damage_taken, damage_inflicted)
    local self = {}
    setmetatable(self, { __index = Otomo })
 
-   self.characterID = characterID
-   self.slotInParty = slotInParty
-   self.uid = uid
-   self.damageTaken = damageTaken or -1
-   self.damageInflicted = damageInflicted or -1
+   self.character_id = character_id
+   self.slot_in_party = slot_in_party
+   self.unique_id = unique_id
+   self.damage_taken = damage_taken or -1
+   self.damage_inflicted = damage_inflicted or -1
 
    return self
 end

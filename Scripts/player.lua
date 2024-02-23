@@ -3,9 +3,9 @@
 --- Created by arciesis.
 --- DateTime: 2/22/24 5:19 PM
 ---
-local PartyTeamClass = require("partyTeam")
-local OtomoUniqueIdClass = require("otomoUniqueId")
-local OtomoClass = require("otomo")
+local party_team = require("partyTeam")
+local otomo_unique_id = require("otomoUniqueId")
+local otomo = require("otomo")
 
 --- @module PalDpsMeter.player
 local player = {}
@@ -13,102 +13,101 @@ local player = {}
 --- My player is not really a player but a game really but its okay
 ---@class Player The Subject of the observer pattern
 ---@field team PartyTeam
----@field observers table
 local Player = {}
 
 ---@return PartyTeam team the team of the player
-function Player:getTeam()
+function Player:get_team()
    return self.team
 end
 
 ---@param team PartyTeam
-function Player:setTeam(team)
-   self._team = team
+function Player:set_team(team)
+   self.team = team
 end
 
 -- FIXME: need to be on the PartyTeam class
 --- Test if the team is empty or not
 ---@return boolean bool true if the team is empty and false otherwise
-function Player:isTeamEmpty()
-   local actualTeam = self:getTeam()
-   return not actualTeam
+function Player:is_team_empty()
+   local actual_team = self:get_team()
+   return not actual_team
 end
 
 --- Update all the team by a new one
----@param newPartyTeam PartyTeam
----@param outOtomoSlotIndex number
-function Player:updateAllTeam(newPartyTeam, outOtomoSlotIndex)
-   self:setTeam(newPartyTeam)
-   newPartyTeam:setNbOtomoCurrentlyInTeam(#newPartyTeam)
-   newPartyTeam:setCurrentlyOutOtomo(outOtomoSlotIndex)
+---@param new_party_team PartyTeam
+---@param out_otomo_slot_index number
+function Player:update_all_team(new_party_team, out_otomo_slot_index)
+   self:set_team(new_party_team)
+   new_party_team:set_nb_otomos(#new_party_team)
+   new_party_team:set_currently_out_otomo(out_otomo_slot_index)
 end
 
 --- update the team of the player
---- @param newPartyTeam PartyTeam the new PartTeam
---- @param outOtomoSlotIndex number the slot index of thrown out otomo
+--- @param new_party_team PartyTeam the new PartTeam
+--- @param out_otomo_slot_index number the slot index of thrown out otomo
 --- @public
-function Player:updateTeam(newPartyTeam, outOtomoSlotIndex)
-   if self:isTeamEmpty() then
-      self:updateAllTeam(newPartyTeam, outOtomoSlotIndex)
+function Player:update_team(new_party_team, out_otomo_slot_index)
+   if self:is_team_empty() then
+      self:update_all_team(new_party_team, out_otomo_slot_index)
    else
       -- test if only a few have changed and update them
-      local modifiedOtomos = self:getTeam():getModifiedOtomos(newPartyTeam)
+      local modified_otomos = self:get_team():get_modified_otomos(new_party_team)
 
       -- used with the recursive version of the function which is not implemented
       -- swappedOtomos = Player.getRecursiveSwappedOtomos(newPartyTeam:getMembers(),
       --     oldPartyTeam:getMembers(), constants.MIN_PER_TEAM,
       --     constants.MAX_PER_TEAM, {})
 
-      if not modifiedOtomos[1] then
+      if not modified_otomos[1] then
          -- Not nil then swap the otomos as needed
          -- What I got => oldTeam, newTeam and NotSwappedOtomos from oldTeam
-         for _, otomo in ipairs(modifiedOtomos) do
-            self:getTeam():updateOtomoByOtomo(otomo)
+         for _, an_otomo in ipairs(modified_otomos) do
+            self:get_team():update_otomo_by_otomo(an_otomo)
          end
          -- return to leave the function
          return
       end
 
       -- if nil then it's a complete different team and we need to modify it all
-      self:updateAllTeam(newPartyTeam, outOtomoSlotIndex)
+      self:update_all_team(new_party_team, out_otomo_slot_index)
    end
 end
 
 --- Hook function that retrieve the Team of a player
-function Player:retrievePartyMemberHook()
+function Player:retrieve_party_members_hook()
    RegisterHook(
          "/Game/Pal/Blueprint/Component/OtomoHolder/BP_OtomoPalHolderComponent.BP_OtomoPalHolderComponent_C:ActivateOtomo",
-         function(component, slotID, StartTransform, isSuccess)
-            if not isSuccess then
+         function(component, slot_index, transform, is_success)
+            if not is_success then
                return
             end
 
             local otomos = {}
 
-            local HolderComponent = component:get()
-            local slots = HolderComponent.CharacterContainer.SlotArray
+            local holder_component = component:get()
+            local slots = holder_component.CharacterContainer.SlotArray
 
             slots:ForEach(function(index, elem)
                local slot = elem:get()
-               local isEmpty = slot:isEmpty()
+               local is_empty = slot:isEmpty()
 
-               if not isEmpty then
+               if not is_empty then
                   local handle = slot:GetHandle()
-                  local otomoIndividualParameter = handle:TryGetIndividualParameter()
-                  local otomoID = otomoIndividualParameter:GetCharacterID()
+                  local otomo_individual_parameter = handle:TryGetIndividualParameter()
+                  local otomo_id = otomo_individual_parameter:GetCharacterID()
 
                   --In game FPalInstanceID representation: Guid: InstanceId / Guid: PlayerUId / Guid: DebugName
-                  local Id = otomoIndividualParameter.IndividualId
+                  local indeividual_id = otomo_individual_parameter.IndividualId
                   print(tostring(index))
-                  local otomoUid = OtomoUniqueIdClass.new(Id:GetStructAddress())
-                  local tmpOtomo = OtomoClass.new(otomoID:ToString(), index, otomoUid, 0, 0)
-                  table.insert(otomos, tmpOtomo)
+                  local an_otomo_unique_id = otomo_unique_id.new(indeividual_id:GetStructAddress())
+                  local tmp_otomo = otomo.new(otomo_id:ToString(), index, an_otomo_unique_id, 0, 0)
+                  table.insert(otomos, tmp_otomo)
                end
             end)
 
-            local foundTeam = PartyTeamClass.new(otomos)
+            local found_team = party_team.new(otomos)
 
-            print(foundTeam:ToString())
+            print(found_team:ToString())
             --
             --self:updateTeam(foundTeam, slotID:get() + 1)
             --print(self:getTeam():ToString())
@@ -125,7 +124,7 @@ function player.new()
    setmetatable(self, { __index = Player })
 
    -- create an empty team
-   self.team = PartyTeamClass.new({})
+   self.team = party_team.new({})
    return self
 end
 

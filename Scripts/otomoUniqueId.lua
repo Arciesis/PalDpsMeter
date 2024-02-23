@@ -4,24 +4,24 @@
 --- DateTime: 2/22/24 5:18 PM
 ---
 --- @module PalDpsMeter.otomoUniqueId
-local otomoUniqueId = {}
+local otomo_unique_id = {}
 
 --- Represent an unique id for otomo, it's actually the address of a ScriptStruct: PalInstanceId
 ---@class OtomoUniqueId
----@field Addr number
+---@field otomo_addr number
 local OtomoUniqueId = {}
 
 --- getter of the structAddr property
 ---@return number theStructAddr
-function OtomoUniqueId:getAddr()
-   return self.Addr
+function OtomoUniqueId:get_addr()
+   return self.otomo_addr
 end
 
 --- internal tostring method
 ---@return string str
 ---@private
 function OtomoUniqueId:__tostring()
-   return string.format("OtomoUnique Identifier: %i", self:getAddr())
+   return string.format("OtomoUnique Identifier: %i", self:get_addr())
 end
 
 --- ToString method
@@ -31,25 +31,25 @@ function OtomoUniqueId:ToString()
 end
 
 --- Test if two Instances of this class are isEqual
----@param otherUId OtomoUniqueId
----@return boolean bool true if there are equal and false otherwise
-function OtomoUniqueId:isEqual(otherUId)
-   if self:getAddr() == 0 or otherUId:getAddr() == 0 then
+---@param other_unique_id OtomoUniqueId
+---@return boolean true if there are equal and false otherwise
+function OtomoUniqueId:is_equal(other_unique_id)
+   if self:get_addr() == 0 or other_unique_id:get_addr() == 0 then
       return false
    end
 
-   return (self:getAddr() == otherUId:getAddr())
+   return (self:get_addr() == other_unique_id:get_addr())
 end
 
 --- Constructor of a PalInstanceID
---- @param structAddr number
-function otomoUniqueId.new(structAddr)
+--- @param struct_addr number
+function otomo_unique_id.new(struct_addr)
    local self = {}
    setmetatable(self, { __index = OtomoUniqueId })
 
-   self.Addr = structAddr
+   self.Addr = struct_addr
 
    return self
 end
 
-return otomoUniqueId
+return otomo_unique_id

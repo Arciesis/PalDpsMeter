@@ -1,7 +1,8 @@
-local pal_dps_meter_event_name = {
-    ActivateOtomo = "activate_otomo",
-    battleModeSwapped = "battle_swap_mode",
-    InactivateCurrentOtomo = "inactivate_current_otomo",
-    getPartyMember = "get_party_member"
+local event_name = {
+   activate_otomo = "activate_otomo",
+   battle_mode_swapped = "battle_swap_mode",
+   inactivate_current_otomo = "inactivate_current_otomo",
+   get_party_members = "get_party_member"
 }
-return pal_dps_meter_event_name
+
+return event_name

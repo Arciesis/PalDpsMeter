@@ -5,7 +5,7 @@
 ---
 
 --- @module PalDpsMeter.partyTeam
-local partyTeam = {}
+local party_team = {}
 
 local constants = {
    MIN_PER_TEAM = 1,
@@ -13,13 +13,13 @@ local constants = {
 }
 ---@class PartyTeam represent the team of otomo of the player
 ---@field private members table a table that contains all of the otomo in the team of the player
----@field private currentlyOutOtomo number the out otomo slot index or -1 if none
----@field private nbOtomoCurrentlyInTeam number The number of otomo currently in the team
+---@field private currently_out_otomo number the out otomo slot index or -1 if none
+---@field private nb_otomos number The number of otomo currently in the team
 local PartyTeam = {}
 
 --- Getter of the field members
 --- @return table the team of otomo
-function PartyTeam:getMembers()
+function PartyTeam:get_members()
    return self.members
 end
 
@@ -38,102 +38,102 @@ end
 --end
 
 --- @return number slotID of the currently out otomo
-function PartyTeam:getCurrentlyOutOtomo()
-   return self.currentlyOutOtomo
+function PartyTeam:get_currently_out_otomo()
+   return self.currently_out_otomo
 end
 
 ---@return number @nbOtomoCurrentlyInTeam
-function PartyTeam:getNbOtomoCurrentlyInTeam()
-   return self.nbOtomoCurrentlyInTeam
+function PartyTeam:get_nb_otomos()
+   return self.nb_otomos
 end
 
 ---@param otomos table the @Otomo to set in the team
-function PartyTeam:setMembers(otomos)
+function PartyTeam:set_members(otomos)
    self.members = otomos
 end
 
----@param slotIndex number
-function PartyTeam:setCurrentlyOutOtomo(slotIndex)
-   print(string.format("slotID: %i", slotIndex))
-   if slotIndex < constants.MIN_PER_TEAM or slotIndex > constants.MAX_PER_TEAM then
+---@param slot_index number
+function PartyTeam:set_currently_out_otomo(slot_index)
+   print(string.format("slotID: %i", slot_index))
+   if slot_index < constants.MIN_PER_TEAM or slot_index > constants.MAX_PER_TEAM then
       print("[PalDpsMeter] Your are trying to set a slot out of band")
       return
    end
-   self.currentlyOutOtomo = slotIndex
+   self.currently_out_otomo = slot_index
 end
 
 ---@param nb number
-function PartyTeam:setNbOtomoCurrentlyInTeam(nb)
+function PartyTeam:set_nb_otomos(nb)
    if nb < constants.MIN_PER_TEAM and nb > constants.MAX_PER_TEAM then
       print("[PalDpsMeter] try to set more otomo than you can have in your team")
       return
    end
-   self.nbOtomoCurrentlyInTeam = nb
+   self.nb_otomos = nb
 end
 
 --- Add an Otomo via its slotID replacing the previous one
 ---@param otomo Otomo the new otomo to place in the team
 function PartyTeam:addOtomo(otomo)
-   local otomoSlotID = otomo:getSlotInParty()
-   local team = self:getMembers()
-   team[otomoSlotID] = otomo
+   local otomo_slot_id = otomo:get_slot_in_party()
+   local team = self:get_members()
+   team[otomo_slot_id] = otomo
 
    -- table.insert(self:getTeam(), otomoSlotID, otomo)
 
-   if self:getNbOtomoCurrentlyInTeam() == nil or self:getNbOtomoCurrentlyInTeam() == 0 then
-      self:setNbOtomoCurrentlyInTeam(1)
+   if self:get_currently_out_otomo() == nil or self:get_currently_out_otomo() == 0 then
+      self:set_nb_otomos(1)
    end
 
-   self:setNbOtomoCurrentlyInTeam(self:getNbOtomoCurrentlyInTeam() + 1)
+   self:set_nb_otomos(self:get_currently_out_otomo() + 1)
 end
 
---- @param slotID number
-function PartyTeam:removeOtomoBySlotID(slotID)
-   table.remove(self:getMembers(), slotID)
+--- @param slot_index number
+function PartyTeam:remove_otomo_by_slot_index(slot_index)
+   table.remove(self:get_members(), slot_index)
    self._nbOtomoCurrentlyInTeam = self._nbOtomoCurrentlyInTeam - 1
 end
 
 ---@param otomo Otomo
-function PartyTeam:updateOtomoByOtomo(otomo)
-   local otomoSlotID = otomo:getSlotInParty()
-   self:getMembers()[otomoSlotID] = otomo
+function PartyTeam:update_otomo_by_otomo(otomo)
+   local otomo_slot_index = otomo:get_slot_in_party()
+   self:get_members()[otomo_slot_index] = otomo
 end
 
 ---@param otomo Otomo
-function PartyTeam:removeOtomo(otomo)
-   local otomoSlotID = otomo:getSlotInParty()
-   self:removeOtomoBySlotID(otomoSlotID)
+function PartyTeam:remove_otomo(otomo)
+   local otomo_slot_index = otomo:get_slot_in_party()
+   self:remove_otomo_by_slot_index(otomo_slot_index)
 end
 
---- @param slotIndex number the index of the otomo to retrieve
+--- @param slot_index number the index of the otomo to retrieve
 --- @return Otomo otomo at the index or nil if none was found
 --- @public
-function PartyTeam:getOtomoBySlotID(slotIndex)
-   if slotIndex < constants.MIN_PER_TEAM or slotIndex > constants.MAX_PER_TEAM then
+function PartyTeam:get_otomo_by_slot_index(slot_index)
+   if slot_index < constants.MIN_PER_TEAM or slot_index > constants.MAX_PER_TEAM then
       error("indexing a wrong slotID")
    end
 
-   local currentTeam = self:getMembers()
+   local current_team = self:get_members()
 
-   if not currentTeam then
+   if not current_team then
       error("team is empty")
    end
 
-   if not currentTeam[slotIndex] then
+   if not current_team[slot_index] then
       error("No otomo found at this index")
    end
 
-   return currentTeam[slotIndex]
+   return current_team[slot_index]
 end
 
----Update the otomo who is out
----@param newSlotIndex number the new @slotID
-function PartyTeam:updateCurrentlyOutOtomo(newSlotIndex)
-   if newSlotId < constants.MIN_PER_TEAM or newSlotIndex > constants.MAX_PER_TEAM then
+--- Update the otomo who is out
+--- @param new_slot_index number the new @slotID
+function PartyTeam:update_currently_out_otomo(new_slot_index)
+   if new_slot_index < constants.MIN_PER_TEAM or new_slot_index > constants.MAX_PER_TEAM then
       error("[PalDpsMeter] Your are trying to update the outOtomo with a wrong Index")
    end
 
-   self:setCurrentlyOutOtomo(newSlotIndex)
+   self:set_currently_out_otomo(new_slot_index)
 end
 
 ----- Since in the game the empty slot are replaced by non empty otomo we need to remove them from
@@ -178,24 +178,21 @@ end
 --   team:updateTeam(newTeam)
 --   -- TODO: create the last method when everything is working correctly
 --end
+
 --- private method tostring
 --- @return string|nil the string to print
 --- @private
 function PartyTeam:__tostring()
-   local str = ""
-   str = string.format(
+   local str = string.format(
          "nbOtomoInTeam: %d, currentlyOutOtomo: %d\n",
-         self:getNbOtomoCurrentlyInTeam(),
-         self:getCurrentlyOutOtomo()
+         self:get_currently_out_otomo(),
+         self:get_currently_out_otomo()
    )
-   --- @type Otomo
-   local otomo
-   for i = 1, self:getNbOtomoCurrentlyInTeam() do
-      otomo = nil
-      
-      if self:getMembers()[i] then
-         otomo = self:getOtomoBySlotID(i)
-         str = str .. string.format("TeamMember: [%s]\n", otomo:ToString())
+
+   for i = 1, self:get_currently_out_otomo() do
+      if self:get_members()[i] then
+         str = str .. string.format("TeamMember: [%s]\n",
+                                    self:get_otomo_by_slot_index(i):ToString())
       end
    end
    return str
@@ -213,66 +210,66 @@ end
 -- end
 
 --- Get the modified otomos between the actual Members (old/self) and the newTeam
---- @param newPartyTeam PartyTeam the new set of members
+--- @param new_party_team PartyTeam the new set of members
 --- @return table the set of otomos to insert into the actual team
-function PartyTeam:getModifiedOtomos(newPartyTeam)
-   local modifiedOtomos = {}
-   local oldPartyTeamMembers = self:getMembers()
-   local newPartyTeamMembers = newPartyTeam:getMembers()
+function PartyTeam:get_modified_otomos(new_party_team)
+   local modified_otomos = {}
+   local old_party_team_members = self:get_members()
+   local new_party_team_members = new_party_team:get_members()
 
    -- iterate over each combination of otomos to find which one has been modified
    -- iterate each time by 1 to 5 because we can have only 1 otomo in the team in the last slot
-   for newIndex = constants.MIN_PER_TEAM, constants.MAX_PER_TEAM, 1 do
-      for oldIndex = constants.MIN_PER_TEAM, constants.MAX_PER_TEAM, 1 do
-         if not newPartyTeamMembers[newIndex] then
+   for new_index = constants.MIN_PER_TEAM, constants.MAX_PER_TEAM, 1 do
+      for old_index = constants.MIN_PER_TEAM, constants.MAX_PER_TEAM, 1 do
+         if not new_party_team_members[new_index] then
             break
          end
 
-         if not oldPartyTeamMembers[oldIndex] then
+         if not old_party_team_members[old_index] then
             break
          end
 
-         if not newPartyTeamMembers[newIndex].isEqual(oldPartyTeamMembers[oldIndex]) then
-            table.insert(modifiedOtomos, newPartyTeamMembers[newIndex])
+         if not new_party_team_members[new_index].isEqual(old_party_team_members[old_index]) then
+            table.insert(modified_otomos, new_party_team_members[new_index])
             break
          end
       end
    end
-   return modifiedOtomos
+   return modified_otomos
 end
 
 --- get an update on the otomos that has been swapped off the team
---- @param newPartyTeam PartyTeam the complete set of the new team
---- @return table swappedOtomos A table containing the newly added otomos
+--- @param new_party_team PartyTeam the complete set of the new team
+--- @return table A table containing the otomos that were previously present and still are
 --- @public
-function PartyTeam:getNotModifiedOtomos(newPartyTeam)
-   local swappedOtomos = {}
-   local oldPartyTeamMembers = self:getMembers()
-   local newPartyTeamMembers = newPartyTeam:getMembers()
+function PartyTeam:get_still_present_otomos(new_party_team)
+   local still_present_otomos = {}
+   local old_party_team_members = self:get_members()
+   local new_party_Team_members = new_party_team:get_members()
 
    -- iterate over each combination of otomos to find which one has not been swapped
-   for _, newOtomo in ipairs(newPartyTeamMembers) do
-      for _, oldOtomo in ipairs(oldPartyTeamMembers) do
-         if newOtomo.isEqual(oldOtomo) then
-            table.insert(swappedOtomos, newOtomo)
+   for _, new_otomo in ipairs(new_party_Team_members) do
+      for _, old_otomo in ipairs(old_party_team_members) do
+         if new_otomo.isEqual(old_otomo) then
+            table.insert(still_present_otomos, new_otomo)
             break
          end
       end
    end
-   return swappedOtomos
+   return still_present_otomos
 end
 
 --- @param otomos table The otomos in the team, can be 1 to 5 if its 0 then the team team is empty
-function partyTeam.new(otomos)
+function party_team.new(otomos)
    local self = {}
    setmetatable(self, { __index = PartyTeam })
 
    self.members = otomos
    -- TODO: Need to be notify
-   self.currentlyOutOtomo = -1
-   self.nbOtomoCurrentlyInTeam = #otomos
+   self.currently_out_otomo = -1
+   self.nb_otomos = #otomos
 
    return self
 end
 
-return partyTeam
+return party_team
